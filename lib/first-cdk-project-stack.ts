@@ -48,7 +48,14 @@ export class FirstCdkProjectStack extends cdk.Stack {
       handler: "index.handler",
       code: lambda.Code.fromAsset(path.join(__dirname, "..", "lambda-handler")),
     });
-
+    const fnUrl = lambdaFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+    });
+    //split the func url as it throws an error
+    const splitFunctionUrl = cdk.Fn.select(2, cdk.Fn.split("/", fnUrl.url));
+    new cdk.CfnOutput(this, "TheFuncUrl", {
+      value: fnUrl.url,
+    });
     const bucket2Origin = new origins.S3Origin(mybucket2);
     //cloudfront distribution with multiple origins
     const cf = new cloudfront.Distribution(this, "myDist", {
@@ -59,6 +66,9 @@ export class FirstCdkProjectStack extends cdk.Stack {
         },
         "/do.jpg": {
           origin: bucket2Origin,
+        },
+        "/test": {
+          origin: new origins.HttpOrigin(splitFunctionUrl),
         },
       },
     });
