@@ -15,6 +15,12 @@ export class FirstCdkProjectStack extends cdk.Stack {
       publicReadAccess: false,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
+    const mybucket2 = new s3.Bucket(this, "SimpleBucketFromCDK2", {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      accessControl: s3.BucketAccessControl.PRIVATE,
+      publicReadAccess: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    });
     const originAccessIdentity = new cloudfront.OriginAccessIdentity(
       this,
       "CloudfrontAccess",
@@ -22,13 +28,30 @@ export class FirstCdkProjectStack extends cdk.Stack {
         comment: `OriginAccessIdentity for ${mybucket.bucketName}`,
       }
     );
-    mybucket.grantRead(originAccessIdentity);
-    const cf = new cloudfront.Distribution(this, "myDist", {
-      defaultBehavior: { origin: new origins.S3Origin(mybucket) },
-    });
+
     new BucketDeployment(this, "BucketDeployment", {
       destinationBucket: mybucket,
       sources: [Source.asset(path.join(__dirname, "..", "dist"))],
+    });
+    new BucketDeployment(this, "BucketDeployment2", {
+      destinationBucket: mybucket2,
+      sources: [Source.asset(path.join(__dirname, "..", "dist2"))],
+    });
+
+    mybucket.grantRead(originAccessIdentity);
+    mybucket2.grantRead(originAccessIdentity);
+    const bucket2Origin = new origins.S3Origin(mybucket2);
+    //cloudfront distribution with multiple origins
+    const cf = new cloudfront.Distribution(this, "myDist", {
+      defaultBehavior: { origin: new origins.S3Origin(mybucket) },
+      additionalBehaviors: {
+        "/demo.html": {
+          origin: bucket2Origin,
+        },
+        "/do.jpg": {
+          origin: bucket2Origin,
+        },
+      },
     });
   }
 }
